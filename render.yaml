@@ -1,6 +1,5 @@
 version: 0.1
 services:
-  # Backend API Service
   - type: web
     name: attendance-system-backend
     env: node
@@ -8,17 +7,9 @@ services:
     plan: free
     branch: main
     rootDir: backend
-    healthCheckPath: /health
-    autoDeploy: true
-    
-    # Build Command
-    buildCommand: |
-      npm install
-    
-    # Start Command
+    buildCommand: npm install
     startCommand: npm start
-    
-    # Environment Variables
+    healthCheckPath: /health
     envVars:
       - key: MONGODB_URI
         sync: false
@@ -28,24 +19,5 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - key: JWT_EXPIRE
-        value: 7d
       - key: CORS_ORIGIN
-        value: "*"  # Change this to your specific frontend URL in production
-      - key: RATE_LIMIT_WINDOW_MS
-        value: "900000"
-      - key: RATE_LIMIT_MAX_REQUESTS
-        value: "100"
-
-jobs:
-  # Clean up expired QR codes daily
-  - type: cron
-    name: cleanup-expired-qr
-    env: node
-    region: ohio
-    plan: free
-    schedule: "0 0 * * *"
-    branch: main
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: node scripts/cleanup.js
+        value: "*"

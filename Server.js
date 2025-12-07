@@ -1,72 +1,77 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const helmet = require('helmet');
-const dotenv = require('dotenv');
-const rateLimit = require('express-rate-limit');
-
-// Load env vars
-dotenv.config();
-
-// Import routes
-const authRoutes = require('./routes/auth');
-const studentRoutes = require('./routes/student');
-const lecturerRoutes = require('./routes/lecturer');
-const adminRoutes = require('./routes/admin');
 
 const app = express();
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-
 // Middleware
-app.use(helmet());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(limiter);
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
+const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/attendance';
+mongoose.connect(mongoURI, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+.then(() => console.log('✅ MongoDB connected successfully'))
+.catch(err => console.error('❌ MongoDB connection error:', err));
 
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/student', studentRoutes);
-app.use('/api/lecturer', lecturerRoutes);
-app.use('/api/admin', adminRoutes);
+// Basic routes
+app.get('/', (req, res) => {
+  res.json({
+    message: '🎓 Attendance System API',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      api: '/api/*'
+    }
+  });
+});
 
-// Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    timestamp: new Date(),
-    uptime: process.uptime()
+  const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+  
+  res.json({
+    status: 'OK',
+    database: dbStatus,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    success: false, 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+// Test API endpoint
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is working!',
+    data: {
+      user: 'test',
+      time: new Date().toISOString()
+    }
   });
 });
 
-const PORT = process.env.PORT || 5000;
+// Error handling
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found',
+    path: req.path
+  });
+});
 
+// Start server
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+  console.log(`
+  🚀 Server started successfully!
+  🌐 URL: http://localhost:${PORT}
+  📅 Time: ${new Date().toLocaleString()}
+  ⚡ Environment: ${process.env.NODE_ENV || 'development'}
+  `);
 });

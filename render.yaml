@@ -1,0 +1,104 @@
+# render.yaml
+services:
+  # Backend API Service
+  - type: web
+    name: attendance-system-backend
+    env: node
+    region: ohio  # or singapore, oregon, frankfurt, etc.
+    plan: free  # or starter, standard, pro for production
+    branch: main
+    rootDir: backend
+    healthCheckPath: /health
+    autoDeploy: true
+    
+    # Build Command
+    buildCommand: |
+      npm install
+      # If you have any build steps for backend
+      # npm run build
+    
+    # Start Command
+    startCommand: npm start
+    
+    # Environment Variables
+    envVars:
+      # Required - Fill these in the Render Dashboard
+      - key: MONGODB_URI
+        sync: false  # You'll need to set this manually
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      
+      # Optional - Set these as needed
+      - key: PORT
+        value: 10000
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: CORS_ORIGIN
+        value: https://your-frontend.vercel.app
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "900000"  # 15 minutes in milliseconds
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: "100"
+      
+      # Email Configuration (if implementing email notifications)
+      # - key: SMTP_HOST
+      #   sync: false
+      # - key: SMTP_PORT
+      #   value: "587"
+      # - key: SMTP_USER
+      #   sync: false
+      # - key: SMTP_PASS
+      #   sync: false
+      # - key: EMAIL_FROM
+      #   value: "noreply@attendance-system.com"
+    
+    # Advanced Settings
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1  # Only needed if you store files locally
+    
+    # Scaling (for paid plans)
+    # numInstances: 1
+    # instanceSize: standard
+    
+    # Addons (if needed)
+    # addons:
+    #   - type: redis
+    #     name: attendance-redis
+    #     plan: free
+
+# Cron Jobs (Scheduled Tasks)
+jobs:
+  # Clean up expired QR codes daily
+  - type: cron
+    name: cleanup-expired-qr
+    env: node
+    region: ohio
+    plan: free
+    schedule: "0 0 * * *"  # Runs at midnight daily
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node scripts/cleanup.js
+    
+  # Generate weekly reports every Monday at 6 AM
+  - type: cron
+    name: weekly-reports
+    env: node
+    region: ohio
+    plan: free
+    schedule: "0 6 * * 1"  # Every Monday at 6 AM
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node scripts/weekly-reports.js
+
+# Database (if you want to use Render's managed MongoDB)
+# databases:
+#   - name: attendance-db
+#     databaseName: attendance
+#     plan: free
+#     region: ohio
